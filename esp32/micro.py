@@ -39,9 +39,13 @@ _ADV_DIRECT_IND = const(0x01)
 _ADV_SCAN_IND = const(0x02)
 _ADV_NONCONN_IND = const(0x03)
 
+_NOTIFY_ENABLE = const(1)
+_INDICATE_ENABLE = const(2)
+
+
 _ACC_SERVICE_UUID = bluetooth.UUID("E95D0753-251D-470A-A062-FA1922DFA9A8")
 _ACC_DATA_UUID = bluetooth.UUID("E95DCA4B-251D-470A-A062-FA1922DFA9A8")
-
+_ACC_DESCR_UUID= bluetooth.UUID(0x2902)
 
 """
 public static String ACCELEROMETERSERVICE_SERVICE_UUID = "E95D0753251D470AA062FA1922DFA9A8";
@@ -79,6 +83,7 @@ class BLESimpleCentral:
         self._end_handle = None
         self._tx_handle = None
         self._rx_handle = None
+        self._acc_handle = None
 
     def _irq(self, event, data):
         if event == _IRQ_SCAN_RESULT:
@@ -141,8 +146,10 @@ class BLESimpleCentral:
         elif event == _IRQ_GATTC_CHARACTERISTIC_RESULT:
             # Connected device returned a characteristic.
             conn_handle, def_handle, value_handle, properties, uuid = data
+            print('gattc_char',data)
             if conn_handle == self._conn_handle and uuid == _ACC_DATA_UUID:
                 self._rx_handle = value_handle
+                print("_IRQ_GATTC_CHARACTERISTIC_RESULT, handle",value_handle)
                 #self._ble.gatts_notify(conn_handle, value_handle )
             # if conn_handle == self._conn_handle and uuid == _UART_TX_CHAR_UUID:
             #     self._tx_handle = value_handle
@@ -153,15 +160,38 @@ class BLESimpleCentral:
             if self._rx_handle is not None:
                 # We've finished connecting and discovering device, fire the connect callback.
                 print("CHARACTERISTIC_DONE")
+                self._ble.gattc_discover_descriptors(self._conn_handle, self._start_handle, self._end_handle)
+
                 if self._conn_callback:
                     self._conn_callback()
             else:
                 print("Failed to find uart rx characteristic.")
-        elif event == self.__IRQ_GATTC_READ_RESULT:
-            print("__IRQ_GATTC_READ_RESULT")
-            conn_handle, value_handle, char_data = data
-            print("__IRQ_GATTC_READ_RESULT -> char_data:",data)
+        # elif event == self._IRQ_GATTC_READ_RESULT:
+        #     print("_IRQ_GATTC_READ_RESULT")
+        #     conn_handle, value_handle, char_data = data
+        #     print("_IRQ_GATTC_READ_RESULT -> char_data:",data)
+         
+        elif event == _IRQ_GATTC_DESCRIPTOR_RESULT:
+            # Connected device returned a descriptor.
+            conn_handle,  value_handle, uuid = data
+            print('desciptor_result',data)
+            if conn_handle == self._conn_handle and uuid == _ACC_DESCR_UUID:
+                print("set acc_handle",value_handle)
+                self._acc_handle = value_handle
             
+        elif event == _IRQ_GATTC_DESCRIPTOR_DONE:
+            print('descriptor done',data)
+            # Characteristic query complete.
+            #if self._tx_handle is not None and self._rx_handle is not None:
+            # if self._rx_handle is not None:
+            #     # We've finished connecting and discovering device, fire the connect callback.
+            #     print("CHARACTERISTIC_DONE")
+            #     self._ble.gattc_discover_descriptors(self._conn_handle, self._start_handle, self._end_handle)
+
+            #     if self._conn_callback:
+            #         self._conn_callback()
+            # else:
+            #     print("Failed to find uart rx characteristic.")
             
         elif event == _IRQ_GATTC_WRITE_DONE:
             conn_handle, value_handle, status = data
@@ -226,10 +256,15 @@ class BLESimpleCentral:
             return
         self._ble.gattc_write(self._conn_handle, self._rx_handle, v, 1 if response else 0)
 
+    def enable_notify(self):
+        if not self.is_connected():
+            return
+        self._ble.gattc_write(self._conn_handle, self._acc_handle, struct.pack('<h', _NOTIFY_ENABLE), 0)
     def read(self):
         if not self.is_connected():
             return
         #self._read_callback = callback
+        print("reading handle",self._conn_handle,self._rx_handle)
         self._ble.gattc_read(self._conn_handle, self._rx_handle)
  
     # Set handler for when data is received over the UART.
@@ -263,20 +298,26 @@ def demo():
     print("Connected")
 
     def on_rx(v):
-        print("RX", v)
+        if len(v)==6:
+            ax,ay,az=struct.unpack("3h",v)
+        print("RX", ax,ay,az)
 
     central.on_notify(on_rx)
 
     with_response = False
-
+    while central._acc_handle == None:
+        time.sleep_ms(100)
+    try:
+        pass 
+        central.enable_notify()
+        #central.read()
+    except:
+        print("TX failed")
+        
     i = 0
     while central.is_connected():
-        try:
-            
-            central.read()
-        except:
-            print("TX failed")
         i += 1
+        #central.read()
         time.sleep_ms(400 if with_response else 30)
 
     print("Disconnected")
