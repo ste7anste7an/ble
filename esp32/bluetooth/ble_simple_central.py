@@ -40,6 +40,9 @@ _UART_SERVICE_UUID = bluetooth.UUID("6E400001-B5A3-F393-E0A9-E50E24DCCA9E")
 _UART_RX_CHAR_UUID = bluetooth.UUID("6E400002-B5A3-F393-E0A9-E50E24DCCA9E")
 _UART_TX_CHAR_UUID = bluetooth.UUID("6E400003-B5A3-F393-E0A9-E50E24DCCA9E")
 
+_DESCR_UUID= bluetooth.UUID(0x2902)
+
+MAC_M5=b'\x50\x02\x91\x8d\x17\x26'
 
 class BLESimpleCentral:
     def __init__(self, ble):
@@ -74,9 +77,11 @@ class BLESimpleCentral:
     def _irq(self, event, data):
         if event == _IRQ_SCAN_RESULT:
             addr_type, addr, adv_type, rssi, adv_data = data
-            if adv_type in (_ADV_IND, _ADV_DIRECT_IND) and _UART_SERVICE_UUID in decode_services(
-                adv_data
-            ):
+            # if adv_type in (_ADV_IND, _ADV_DIRECT_IND) and _UART_SERVICE_UUID in decode_services(
+            #     adv_data
+            # ):
+            if addr == MAC_M5:
+                print("scan",data)
                 # Found a potential device, remember it and stop scanning.
                 self._addr_type = addr_type
                 self._addr = bytes(
@@ -126,6 +131,7 @@ class BLESimpleCentral:
                 print("Failed to find uart service.")
 
         elif event == _IRQ_GATTC_CHARACTERISTIC_RESULT:
+            print("_IRQ_GATTC_CHARACTERISTIC_RESULT",data)
             # Connected device returned a characteristic.
             conn_handle, def_handle, value_handle, properties, uuid = data
             if conn_handle == self._conn_handle and uuid == _UART_RX_CHAR_UUID:
@@ -136,12 +142,25 @@ class BLESimpleCentral:
         elif event == _IRQ_GATTC_CHARACTERISTIC_DONE:
             # Characteristic query complete.
             if self._tx_handle is not None and self._rx_handle is not None:
+                print("CHARACTERISTIC_DONE")
+                self._ble.gattc_discover_descriptors(self._conn_handle, self._start_handle, self._end_handle)
+
                 # We've finished connecting and discovering device, fire the connect callback.
                 if self._conn_callback:
                     self._conn_callback()
             else:
                 print("Failed to find uart rx characteristic.")
-
+        elif event == _IRQ_GATTC_DESCRIPTOR_RESULT:
+            # Connected device returned a descriptor.
+            conn_handle,  value_handle, uuid = data
+            print('desciptor_result',data)
+            if conn_handle == self._conn_handle and uuid == _DESCR_UUID:
+                print("set description_handle",value_handle)
+                self._acc_handle = value_handle
+            
+        elif event == _IRQ_GATTC_DESCRIPTOR_DONE:
+            print('descriptor done',data)
+       
         elif event == _IRQ_GATTC_WRITE_DONE:
             print("write",data)
             conn_handle, value_handle, status = data
@@ -152,7 +171,7 @@ class BLESimpleCentral:
             conn_handle, value_handle, notify_data = data
             if conn_handle == self._conn_handle and value_handle == self._tx_handle:
                 if self._notify_callback:
-                    self._notify_callback(notify_data)
+                    self._notify_callback(bytes(notify_data))
 
     # Returns true if we've successfully connected and discovered characteristics.
     def is_connected(self):
@@ -191,6 +210,10 @@ class BLESimpleCentral:
         if not self.is_connected():
             return
         self._ble.gattc_write(self._conn_handle, self._rx_handle, v, 1 if response else 0)
+    def enable_notify(self,enable):
+        if not self.is_connected():
+            return
+        self._ble.gattc_write(self._conn_handle, self._acc_handle, struct.pack('<h', enable), 1)
 
     # Set handler for when data is received over the UART.
     def on_notify(self, callback):
@@ -232,12 +255,15 @@ def demo():
     i = 0
     while central.is_connected():
         try:
-            v = str(i) + "_"
+            v = str(i) + "_CENTRAL_"
             print("TX", v)
             central.write(v, with_response)
         except:
             print("TX failed")
         i += 1
+        if i==10:
+            print("=====================\ndisable notify")
+            central.enable_notify(0)
         time.sleep_ms(400 if with_response else 30)
 
     print("Disconnected")
