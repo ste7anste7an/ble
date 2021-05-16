@@ -166,11 +166,7 @@ class BLESimpleCentral:
                     self._conn_callback()
             else:
                 print("Failed to find uart rx characteristic.")
-        # elif event == self._IRQ_GATTC_READ_RESULT:
-        #     print("_IRQ_GATTC_READ_RESULT")
-        #     conn_handle, value_handle, char_data = data
-        #     print("_IRQ_GATTC_READ_RESULT -> char_data:",data)
-         
+
         elif event == _IRQ_GATTC_DESCRIPTOR_RESULT:
             # Connected device returned a descriptor.
             conn_handle,  value_handle, uuid = data
@@ -181,17 +177,6 @@ class BLESimpleCentral:
             
         elif event == _IRQ_GATTC_DESCRIPTOR_DONE:
             print('descriptor done',data)
-            # Characteristic query complete.
-            #if self._tx_handle is not None and self._rx_handle is not None:
-            # if self._rx_handle is not None:
-            #     # We've finished connecting and discovering device, fire the connect callback.
-            #     print("CHARACTERISTIC_DONE")
-            #     self._ble.gattc_discover_descriptors(self._conn_handle, self._start_handle, self._end_handle)
-
-            #     if self._conn_callback:
-            #         self._conn_callback()
-            # else:
-            #     print("Failed to find uart rx characteristic.")
             
         elif event == _IRQ_GATTC_WRITE_DONE:
             conn_handle, value_handle, status = data
