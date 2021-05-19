@@ -64,7 +64,8 @@ public static String ACCELEROMETERDATA_CHARACTERISTIC_UUID = "E95DCA4B251D470AA0
 public static String ACCELEROMETERPERIOD_CHARACTERISTIC_UUID = "E95DFB24251D470AA062FA1922DFA9A8";
 """
 MAC_MICRO=b'\xFA\x35\x2F\x6C\x13\xf8'
-MAC_ESP=b'\x50\x02\x91\x8d\x17\x26'
+#MAC_ESP=b'\x50\x02\x91\x8d\x17\x26'
+MAC_ESP=b'\xd8\xa0\x1d\x40\x71\x3e'
 
 # Advertising payloads are repeated packets of the following form:
 #1 byte data length (N + 1)
