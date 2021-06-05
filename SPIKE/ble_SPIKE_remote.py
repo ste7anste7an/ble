@@ -252,6 +252,9 @@ class BLESimpleCentral:
         elif event == _IRQ_GATTC_CHARACTERISTIC_RESULT:
             # Connected device returned a characteristic.
             conn_handle, def_handle, value_handle, properties, uuid = data
+            self._n+=1
+            light(self._n)
+            self._n+=1
             #print('gattc_char',data)
             if conn_handle == self._conn_handle:
                 if uuid == _UART_RX:
@@ -292,7 +295,7 @@ class BLESimpleCentral:
         elif event == _IRQ_GATTC_NOTIFY:
             print("_IRQ_GATTC_NOTIFY")
             conn_handle, value_handle, notify_data = data
-            notify_data=bytes(value_handle,notify_data)
+            notify_data=bytes(notify_data)
             print("data:",notify_data)
 
             if conn_handle == self._conn_handle and value_handle == self._tx_handle:
@@ -346,10 +349,10 @@ class BLESimpleCentral:
         self._reset()
 
     # Send data over the UART
-    def write(self, v, response=False):
+    def write(self, handle, v, response=False):
         if not self.is_connected():
             return
-        self._ble.gattc_write(self._conn_handle, self._rx_handle, v, 1 if response else 0)
+        self._ble.gattc_write(self._conn_handle, handle, v, 1 if response else 0)
 
     def enable_notify(self):
         if not self.is_connected():
@@ -404,7 +407,9 @@ def demo():
             return
 
     print("Connected")
-
+    print("rx,tx handle",central._rx_handle,central._tx_handle)
+    time.sleep_ms(1000)
+    central.write(central._rx_handle+3,b'\x01\x00')
     def on_rx(v):
         print("RX", v)
 
@@ -432,8 +437,10 @@ def demo():
             v=b'L'
             
         elif hub.right_button.was_pressed():
-            v=b'R'
-        elif time.ticks_diff(time.ticks_ms(),t0)>2000:
+            #v=b'R'
+            print("disconnect now")
+            central.disconnect()
+        elif time.ticks_diff(time.ticks_ms(),t0)>4000:
             t0=time.ticks_ms()
             v=b'S'
 
@@ -441,7 +448,7 @@ def demo():
             v=None
         if v:
             try:
-                central.write(v, with_response)
+                central.write(central._rx_handle, v, with_response)
             except:
                 print("TX failed")
         i += 1

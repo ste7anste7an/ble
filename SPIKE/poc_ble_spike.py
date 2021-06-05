@@ -206,7 +206,7 @@ class BLESimplePeripheral:
             conn_handle, value_handle = data
             #print("WRITE",data)
             value = self._ble.gatts_read(value_handle)
-            #print("value=",value)
+            print("value=",value)
             if value_handle == self._handle_rx and self._write_callback:
                 self._write_callback(value)
 
@@ -243,15 +243,21 @@ def demo():
             p._n+=5
         elif v==b'L':
             p._n-=1
+            p.send("L")
         elif v==b'R':
             p._n+=1
+            p.send("R")
         elif v==b'S':
             hubprime.speaker.start_beep()
             sleep_ms(500)
             hubprime.speaker.stop()
 
-        if p._n<0: p._n+=25
-        if p._n>24: p._n-=25
+        if p._n<0: 
+            p._n+=25
+            p.send(b"wrap")
+        if p._n>24:
+            p._n-=25
+            p.send(b"unwrap")
         hubprime.light_matrix.off()
         light(p._n)
 
@@ -260,13 +266,14 @@ def demo():
     i = 0
     while True:
         if p.is_connected():
-            # Short burst of queued notifications.
-            for _ in range(1):
-                data = str(i) + "_"
-                #print("TX", data)
-                p.send(data)
-                i += 1
-        time.sleep_ms(500)
+            # # Short burst of queued notifications.
+            # for _ in range(1):
+                 data = str(i) + "_"
+            #     #print("TX", data)
+                 p.send(data)
+                 i += 1
+            
+        time.sleep_ms(5000)
 
 
 demo()
