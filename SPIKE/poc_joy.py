@@ -134,19 +134,6 @@ def decode_services(payload):
     return services
 
 
-def demo():
-    payload = advertising_payload(
-        name="micropython",
-        services=[bluetooth.UUID(0x181A), bluetooth.UUID("6E400001-B5A3-F393-E0A9-E50E24DCCA9E")],
-    )
-    print(payload)
-    print(decode_name(payload))
-    print(decode_services(payload))
-
-
-if __name__ == "__main__":
-    demo()
-
 from micropython import const
 
 _IRQ_CENTRAL_CONNECT = const(1)
