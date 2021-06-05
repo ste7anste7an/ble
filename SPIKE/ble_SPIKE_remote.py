@@ -236,7 +236,8 @@ class BLESimpleCentral:
             self._n+=1
             if conn_handle == self._conn_handle and uuid == _UART_UUID:
                 self._start_handle, self._end_handle = start_handle, end_handle
-                print("UART_UID handles",data)
+                #print("UART_UID handles",data)
+                time.sleep_ms(300)
                 self._ble.gattc_discover_characteristics(self._conn_handle, start_handle, end_handle)
 
         elif event == _IRQ_GATTC_SERVICE_DONE:
@@ -290,13 +291,13 @@ class BLESimpleCentral:
 
         elif event == _IRQ_GATTC_WRITE_DONE:
             conn_handle, value_handle, status = data
-            print("TX complete")
+            #print("TX complete")
 
         elif event == _IRQ_GATTC_NOTIFY:
-            print("_IRQ_GATTC_NOTIFY")
+            #print("_IRQ_GATTC_NOTIFY")
             conn_handle, value_handle, notify_data = data
             notify_data=bytes(notify_data)
-            print("data:",notify_data)
+            #print("data:",notify_data)
 
             if conn_handle == self._conn_handle and value_handle == self._tx_handle:
                 if self._notify_callback:
@@ -357,12 +358,12 @@ class BLESimpleCentral:
     def enable_notify(self):
         if not self.is_connected():
             return
-        print("enable notify")
+        #print("enable notify")
         #self._ble.gattc_write(self._conn_handle, self._acc_handle, struct.pack('<h', _NOTIFY_ENABLE), 0)
         for i in range(38,49):
             self._ble.gattc_write(self._conn_handle, i, struct.pack('<h', _NOTIFY_ENABLE), 0)
             time.sleep_ms(50)
-        print("notified enabled")
+        #print("notified enabled")
     def read(self,handle,callback):
         if not self.is_connected():
             return
@@ -383,7 +384,7 @@ class BLESimpleCentral:
 #motor_steer = Motor("A")
 
 def demo():
-    print("starting BLE")
+    #print("starting BLE")
     ble = bluetooth.BLE()
     central = BLESimpleCentral(ble)
 
@@ -396,8 +397,8 @@ def demo():
         else:
             nonlocal not_found
             not_found = True
-            print("No peripheral found.")
-    print("start scanning")
+            #print("No peripheral found.")
+    #print("start scanning")
     central.scan(callback=on_scan)
 
     # Wait for connection...
@@ -406,12 +407,14 @@ def demo():
         if not_found:
             return
 
-    print("Connected")
-    print("rx,tx handle",central._rx_handle,central._tx_handle)
+    #print("Connected")
+    #print("rx,tx handle",central._rx_handle,central._tx_handle)
     time.sleep_ms(1000)
     central.write(central._rx_handle+3,b'\x01\x00')
     def on_rx(v):
         print("RX", v)
+        central._n+=1
+        light(self._n)
 
     central.on_notify(on_rx)
 
@@ -438,7 +441,7 @@ def demo():
             
         elif hub.right_button.was_pressed():
             #v=b'R'
-            print("disconnect now")
+            #print("disconnect now")
             central.disconnect()
         elif time.ticks_diff(time.ticks_ms(),t0)>4000:
             t0=time.ticks_ms()
@@ -453,6 +456,7 @@ def demo():
                 print("TX failed")
         i += 1
         time.sleep_ms(1000 if with_response else 200)
+        central.read(central._tx_handle,on_rx)
     print("Disconnected")
 
 

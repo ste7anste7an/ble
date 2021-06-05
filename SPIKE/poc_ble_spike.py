@@ -214,6 +214,12 @@ class BLESimplePeripheral:
         for conn_handle in self._connections:
             self._ble.gatts_notify(conn_handle, self._handle_tx, data)
 
+    def write(self, data):
+        for conn_handle in self._connections:
+            self._ble.gatts_write(conn_handle, self._handle_tx, data)
+
+
+
     def is_connected(self):
         return len(self._connections) > 0
 
@@ -243,10 +249,10 @@ def demo():
             p._n+=5
         elif v==b'L':
             p._n-=1
-            p.send("L")
+            #p.write("L")
         elif v==b'R':
             p._n+=1
-            p.send("R")
+            #p.send("R")
         elif v==b'S':
             hubprime.speaker.start_beep()
             sleep_ms(500)
@@ -254,10 +260,10 @@ def demo():
 
         if p._n<0: 
             p._n+=25
-            p.send(b"wrap")
+            p.write(b"wrap")
         if p._n>24:
             p._n-=25
-            p.send(b"unwrap")
+            #p.write(b"unwrap")
         hubprime.light_matrix.off()
         light(p._n)
 
@@ -273,7 +279,7 @@ def demo():
                  p.send(data)
                  i += 1
             
-        time.sleep_ms(5000)
+        time.sleep_ms(2000)
 
 
 demo()
